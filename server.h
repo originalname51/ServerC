@@ -20,8 +20,16 @@
 #include <sys/wait.h>
 #include <signal.h>
 
-int makeServer(char * portnumber);
 
+const int    NET_CHAR_RECIEVE_INT   = 4;		//How many characters are being recieved (int in ASCII)
+const int	   NET_CHAR_SEND_INT    = 5;	//How many characters are being sent. (int in ASCII)
+const int    MESSAGE_LENGTH         = 500;	//Message Length. Can go up to 999 and function as normal.
+const int	   CHAR_OFFSET			= 100;	//offset used to send same # of characters always.
 
+int  makeServer(char * portnumber);
+void sigchild_handler(int signal);
+void clientAction(int clientID, struct sockaddr_storage *client_address, socklen_t * length);
+void sendFileSize(int client_fd, long fileSize);
+void _getCommand(char * command, int sockfd);
 
 #endif /* SERVER_H_ */
