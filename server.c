@@ -72,15 +72,98 @@ while(1)
 
 void clientAction(int client_fd, struct sockaddr_storage * client_address, socklen_t * sin_size)
 {
+	int ftpConnection;
 	char getUserInput[MESSAGE_LENGTH];
 	_getCommand(getUserInput, client_fd);
-	long fileSize = 5;
-    sendFileSize(client_fd, fileSize);
+	command * args = _parseCommand(getUserInput);
+
+	if(args->action == ERROR){
+		char status[7] = "ERRO\n\0";
+		write(client_fd, &status, strlen(status));
+		close(client_fd);
+		return;
+	}
+
+	char status[7] = "PASS\n\0";;
+	write(client_fd, &status, strlen(status));
+
+	sleep(1); //Give the client a chance to make a socket.
+	ftpConnection = makeConnection(client_address, sin_size, args);
+	printf("%d", ftpConnection);
+	if(args->action == LS)
+	{
+		_LS_Command(ftpConnection);
+	}
+	else if(args->action == G)
+	{
+		_G_Command(ftpConnection, client_fd, args);
+		printf("Was a G");
+	}
+
+	free(args);
 	close(client_fd);
 
 }
 
-void sendFileSize(int client_fd, long fileSize)
+int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_size, struct command * commands)
+{
+
+	int dataConnectionFD;
+	char ipstr[INET6_ADDRSTRLEN];
+	struct sockaddr_in * ipv4  = NULL;
+	struct sockaddr_in6 * ipv6 = NULL;
+	struct addrinfo hints, *servinfo, *p;
+	int rv;
+
+
+	if (client_address->ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)client_address;
+	    inet_ntop(AF_INET, &ipv4->sin_addr, ipstr, sizeof ipstr);
+	} else { // AF_INET6
+	    ipv6 = (struct sockaddr_in6 *)client_address;
+	    inet_ntop(AF_INET6, &ipv6->sin6_addr, ipstr, sizeof ipstr);
+	}
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+    if ((rv = getaddrinfo("Blackbird", commands->dataPort, &hints, &servinfo)) != 0) { //change Blackbird to ipstr
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+       exit(1);
+    }
+
+    // loop through all the results and connect to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+        if ((dataConnectionFD = socket(p->ai_family, p->ai_socktype,
+                p->ai_protocol)) == -1) {
+            perror("client: socket");
+            continue;
+        }
+
+        if (connect(dataConnectionFD, p->ai_addr, p->ai_addrlen) == -1) {
+            close(dataConnectionFD);
+            perror("client: connect");
+            continue;
+        }
+
+        break;
+    }
+
+    if (p == NULL) {
+        fprintf(stderr, "client: failed to connect\n");
+        return 2;
+    }
+    freeaddrinfo(servinfo); //no memory leak.
+
+
+	printf("\nConnected to address: %s on port %s:\n", ipstr, commands->dataPort);
+	return dataConnectionFD;
+}
+
+
+
+void sendFileSize(int client_fd, int fileSize)
 {
 	char numberString[256];
     memset(numberString, '\0', sizeof(numberString));
@@ -186,6 +269,58 @@ void sigchild_handler(int s)
 }
 
 
+//http://stackoverflow.com/questions/266357/tokenizing-strings-in-c
+command * _parseCommand(char * commandList)
+{
+
+	command * comReturn ;
+	int counter = 1;
+	comReturn = malloc(sizeof(command));
+	char tokenized[MESSAGE_LENGTH];
+	strcpy(tokenized,commandList);
+
+	char * commandArg = strtok(tokenized, " ");
+	while(commandArg)
+	{
+		if(counter ==3)
+		{
+			if(strcmp(commandArg, "-l") == 0)
+			{
+				comReturn->action = LS;
+			}
+			else if(strcmp(commandArg, "-g") == 0)
+			{
+				comReturn->action = G;
+			}
+			else
+			{
+				comReturn->action = ERROR;
+			}
+		}
+		if(counter == 4)
+		{
+			if(comReturn->action == LS)
+			{
+				comReturn->dataPort = strdup(commandArg);//strdup
+			}
+			if(comReturn->action == G)
+			{
+				comReturn->fileName = strdup(commandArg);
+			}
+		}
+		if(counter == 5)
+		{
+			if(comReturn->action == G)
+			{
+				comReturn->dataPort = strdup(commandArg);
+			}
+		}
+	    commandArg = strtok(NULL, " ");
+	    counter++;
+	}
+	return comReturn;
+}
+
 void _getCommand(char * message, int sockfd)
 {
 	int index, n, filesize;
@@ -221,4 +356,3 @@ void _getCommand(char * message, int sockfd)
 			index+=n;
 	 }
 }
-
