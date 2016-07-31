@@ -161,7 +161,10 @@ int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_siz
 	return dataConnectionFD;
 }
 
-
+void _G_Command(int ftpConnection, int client_fd, struct command * args)
+{}
+void _LS_Command(int ftpConnection)
+{}
 
 void sendFileSize(int client_fd, int fileSize)
 {
