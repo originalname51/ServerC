@@ -19,7 +19,9 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
-
+#include <stdio.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 
 const int    NET_CHAR_RECIEVE_INT   = 4;		//How many characters are being recieved (int in ASCII)
@@ -43,7 +45,7 @@ void _getCommand(char * command, int sockfd);
 command * _parseCommand(char * commandlist);
 int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_size, struct command * commands);
 void _G_Command(int ftpConnection, int client_fd, struct command * args);
-void _LS_Command(int ftpConnection);
+void _LS_Command(int ftpConnection, int client_fd);
 
 
 #endif /* SERVER_H_ */

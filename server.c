@@ -89,10 +89,10 @@ void clientAction(int client_fd, struct sockaddr_storage * client_address, sockl
 
 	sleep(1); //Give the client a chance to make a socket.
 	ftpConnection = makeConnection(client_address, sin_size, args);
-	printf("%d", ftpConnection);
 	if(args->action == LS)
 	{
-		_LS_Command(ftpConnection);
+		_LS_Command(ftpConnection, client_fd);
+		close(ftpConnection);
 	}
 	else if(args->action == G)
 	{
@@ -114,7 +114,6 @@ int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_siz
 	struct sockaddr_in6 * ipv6 = NULL;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
-
 
 	if (client_address->ss_family == AF_INET) {
 		ipv4 = (struct sockaddr_in *)client_address;
@@ -163,8 +162,47 @@ int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_siz
 
 void _G_Command(int ftpConnection, int client_fd, struct command * args)
 {}
-void _LS_Command(int ftpConnection)
-{}
+
+//https://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
+void _LS_Command(int ftpConnection, int client_fd)
+{
+
+	char buffer[256];
+	  DIR *dp;
+	  struct dirent *ep;
+	  int counter =  0;
+
+	  dp = opendir ("./");
+		  if (dp != NULL)
+		    {
+		      while ((ep = readdir (dp))){
+		    	 counter++;
+		      }
+		      (void) closedir (dp);
+		    }
+		  else
+		    perror ("Couldn't open the directory");
+
+		  sendFileSize(client_fd, counter);
+
+	  dp = opendir ("./");
+	  if (dp != NULL)
+	    {
+	      while ((ep = readdir (dp))){
+//	    	    memset(&addrRestrictions, 0, sizeof(addrRestrictions));
+        	  memset(buffer, '\0', sizeof(buffer));
+	    	  strcpy(buffer,ep->d_name);
+	    	  write(ftpConnection,buffer,sizeof(buffer));
+	      }
+	      (void) closedir (dp);
+	    }
+	  else
+	    perror ("Couldn't open the directory");
+
+//	  printf("%d\n",counter);
+//	char hello[7] = "hello\n";
+//	write(ftpConnection,hello,sizeof(hello));
+}
 
 void sendFileSize(int client_fd, int fileSize)
 {
