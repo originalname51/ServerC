@@ -19,10 +19,10 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
-#include <stdio.h>
-#include <sys/types.h>
 #include <dirent.h>
-
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 const int    NET_CHAR_RECIEVE_INT   = 4;		//How many characters are being recieved (int in ASCII)
 const int	   NET_CHAR_SEND_INT    = 5;	//How many characters are being sent. (int in ASCII)

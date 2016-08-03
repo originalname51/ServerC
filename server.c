@@ -2,7 +2,6 @@
 
 //https://www.cerberusftp.com/support/help/configuring.htm
 //http://slacksite.com/other/ftp.html
-
 int main(int argc, char *argv[])
 {
 	int sockID, client_fd;
@@ -97,7 +96,6 @@ void clientAction(int client_fd, struct sockaddr_storage * client_address, sockl
 	else if(args->action == G)
 	{
 		_G_Command(ftpConnection, client_fd, args);
-		printf("Was a G");
 	}
 
 	free(args);
@@ -160,8 +158,43 @@ int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_siz
 	return dataConnectionFD;
 }
 
+//http://stackoverflow.com/questions/883659/hardcode-byte-array-in-c
+//http://stackoverflow.com/questions/32150119/transferring-values-from-a-char-array-to-an-integer-array-in-c-programming
+//https://docs.oracle.com/javase/7/docs/api/java/io/BufferedReader.html
+//http://www.rgagnon.com/javadetails/java-0542.html
+//http://stackoverflow.com/questions/2014033/send-and-receive-a-file-in-socket-programming-in-linux-with-c-c-gcc-g
 void _G_Command(int ftpConnection, int client_fd, struct command * args)
-{}
+{
+	int filefd;
+	char buffer[BUFSIZ];
+
+	 filefd = open(args->fileName, O_RDONLY);
+	    if (filefd == -1) {
+	        perror("open");
+	        exit(EXIT_FAILURE);
+	    }
+
+	    memset(buffer, '\0', sizeof(buffer));
+	    int read_return = 0;
+	    while (1) {
+	            read_return = read(filefd, buffer, BUFSIZ);
+	            if (read_return == 0)
+	                break;
+	            if (read_return == -1) {
+	                      perror("read");
+	                      exit(EXIT_FAILURE);
+	                  }
+	            sendFileSize(client_fd, read_return);
+	            //send read return to client. Client now knows how many bytes are getting setn.
+	            if (write(ftpConnection, buffer, read_return) == -1) {
+	                perror("write");
+	                exit(EXIT_FAILURE);
+	            }
+	    }
+	    printf("File Sent!\n");
+
+        sendFileSize(client_fd, 0); //send a 0 to terminate client while loop.
+}
 
 //https://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
 void _LS_Command(int ftpConnection, int client_fd)
@@ -198,10 +231,6 @@ void _LS_Command(int ftpConnection, int client_fd)
 	    }
 	  else
 	    perror ("Couldn't open the directory");
-
-//	  printf("%d\n",counter);
-//	char hello[7] = "hello\n";
-//	write(ftpConnection,hello,sizeof(hello));
 }
 
 void sendFileSize(int client_fd, int fileSize)
@@ -342,7 +371,7 @@ command * _parseCommand(char * commandList)
 		{
 			if(comReturn->action == LS)
 			{
-				comReturn->dataPort = strdup(commandArg);//strdup
+				comReturn->dataPort = strdup(commandArg);
 			}
 			if(comReturn->action == G)
 			{
