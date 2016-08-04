@@ -170,8 +170,8 @@ void _G_Command(int ftpConnection, int client_fd, struct command * args)
 
 	 filefd = open(args->fileName, O_RDONLY);
 	    if (filefd == -1) {
-	        perror("open");
-	        exit(EXIT_FAILURE);
+	        sendFileSize(client_fd, 0); //send a 0 to indicate error message
+	        return;
 	    }
 
 	    memset(buffer, '\0', sizeof(buffer));
@@ -244,8 +244,6 @@ void sendFileSize(int client_fd, int fileSize)
 	 {
 		 perror("Problem in sendFileSize function");
 	 }
-
-
 }
 
 /*
