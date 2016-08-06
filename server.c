@@ -94,13 +94,11 @@ void clientAction(int client_fd, struct sockaddr_storage * client_address, sockl
 
 	//Send pass or fail from parsed arguments.
 	if (args->action == ERROR) {
-		char status[7] = "ERRO\n\0";
-		write(client_fd, &status, strlen(status));
+		sendFileSize(client_fd,-1);
 		close(client_fd);
 		return;
 	} else {
-		char status[7] = "PASS\n\0";
-		write(client_fd, &status, strlen(status));
+		sendFileSize(client_fd,0);
 	}
 	sleep(1); //Give the client a chance to make a socket.
 	ftpConnection = makeConnection(client_address, sin_size, args);	//make ftp data connection
@@ -200,15 +198,18 @@ int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_siz
 void _G_Command(int ftpConnection, int client_fd, struct command * args) {
 
 	int filefd;
-	char buffer[BUFSIZ];
+	char buffer[BUFSIZ];// https://www.gnu.org/software/libc/manual/html_node/Controlling-Buffering.html
 	//Open the file. Send an error message and return if fail.
 	filefd = open(args->fileName, O_RDONLY);
 	if (filefd == -1) {
 		sendFileSize(client_fd, -1); //send a -1 to indicate error message
 		return;
 	}
+	int test = _getFileSize(args);
+	printf("%d\n",test);
+	sendFileSize(client_fd, test);
 
-	memset(buffer, '\0', sizeof(buffer));
+//	memset(buffer, '\0', sizeof(buffer));
 	int read_return = 0;
 	while (1) {
 		read_return = read(filefd, buffer, BUFSIZ);
@@ -218,7 +219,8 @@ void _G_Command(int ftpConnection, int client_fd, struct command * args) {
 			perror("read");
 			exit(1);
 		}
-		sendFileSize(client_fd, read_return);
+			printf("%d\n",read_return);
+		sendFileSize(client_fd, read_return-1);
 		//send read return to client. Client now knows how many bytes are getting sent.
 		if (write(ftpConnection, buffer, read_return) == -1) { //send over the buffer
 			perror("write");
@@ -258,7 +260,7 @@ void _LS_Command(int ftpConnection, int client_fd) {
 	sendFileSize(client_fd, counter); //send file count.
 
 
-	//iterate through send files.
+	//iterate through and send files.
 	dp = opendir("./");
 	if (dp != NULL) {
 		while ((ep = readdir(dp))) {
@@ -277,11 +279,18 @@ void _LS_Command(int ftpConnection, int client_fd) {
  * Primarily this uses sprintf to print the integer to a string and then sends it to the client.
  * */
 void sendFileSize(int client_fd, int fileSize) {
-	char numberString[256];
+	char numberString[18];
 	memset(numberString, '\0', sizeof(numberString));
 	sprintf(numberString,"%d",fileSize);
-	if (send(client_fd, numberString, sizeof(numberString), 0) == -1) {
+	numberString[17] = '\0';
+	int sentSoFar = 0;
+	while(sentSoFar != 17)
+	{
+	sentSoFar = write(client_fd, numberString, 17); //send 16 bytes.
+			if(sentSoFar == -1){
 		perror("Problem in sendFileSize function");
+		sentSoFar += sentSoFar;
+	}
 	}
 }
 
@@ -367,7 +376,7 @@ command * _parseCommand(char * commandList) {
 	int counter = 1;
 	char tokenized[MESSAGE_LENGTH];
 
-	strcpy(tokenized, commandList);
+	strcpy(tokenized, commandList);	//I do not want to destroy command list so I copy it.
 
 	char * commandArg = strtok(tokenized, " ");
 	while (commandArg) {
@@ -433,3 +442,27 @@ void _getCommand(char * message, int sockfd) {
 		index += n;
 	}
 }
+
+
+/*
+ * This will return the byte size of the program. It is unnecessary
+ * 1) Open the file.
+ * 2) Use fseek to go to the end of a file.
+ * 3) use Ftell to get the file location (which coincidentally is the file size in bytes)
+ * 4) fseek to start of file
+ * 5) close the file.
+ * 6) return the size.
+ * http://ask.systutorials.com/68/how-to-get-the-size-of-a-file-in-c
+ * */
+int _getFileSize(struct command * args)
+{
+	int size;
+	FILE *fp;
+	fp = fopen(args->fileName, "r");
+	fseek(fp, 0,SEEK_END);
+	size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+	fclose(fp);
+	return size;
+}
+

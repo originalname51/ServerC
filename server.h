@@ -26,7 +26,7 @@
 
 const int    NET_CHAR_RECIEVE_INT   = 4;		//How many characters are being received (int in ASCII)
 const int	   NET_CHAR_SEND_INT    = 5;	//How many characters are being sent. (int in ASCII)
-const int    MESSAGE_LENGTH         = 500;	//Message Length. Can go up to 999 and function as normal.
+const int    MESSAGE_LENGTH         = 100;	//Message Length. Can go up to 999 and function as normal.
 const int	   CHAR_OFFSET			= 100;	//offset used to send same # of characters always.
 
 enum action_command {LS, G, ERROR};
@@ -47,4 +47,6 @@ command * _parseCommand(char * commandlist);	//works with get command to parse c
 int makeConnection(struct sockaddr_storage * client_address, socklen_t * sin_size, struct command * commands); //makes connection (used for ftp data port)
 void _G_Command(int ftpConnection, int client_fd, struct command * args); //G command instructions.
 void _LS_Command(int ftpConnection, int client_fd);							//L command instructions.
+int _getFileSize(struct command * args);
+
 #endif /* SERVER_H_ */
