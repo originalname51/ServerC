@@ -220,7 +220,7 @@ void _G_Command(int ftpConnection, int client_fd, struct command * args) {
 			exit(1);
 		}
 			printf("%d\n",read_return);
-		sendFileSize(client_fd, read_return-1);
+//		sendFileSize(client_fd, read_return-1);
 		//send read return to client. Client now knows how many bytes are getting sent.
 		if (write(ftpConnection, buffer, read_return) == -1) { //send over the buffer
 			perror("write");
@@ -228,7 +228,7 @@ void _G_Command(int ftpConnection, int client_fd, struct command * args) {
 		}
 	}
 	printf("File Sent!\n"); //loop terminated. Server has sent the file.
-	sendFileSize(client_fd, 0); //send a 0 to terminate client while loop.
+//	sendFileSize(client_fd, 0); //send a 0 to terminate client while loop.
 }
 
 /*
