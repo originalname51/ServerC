@@ -202,14 +202,16 @@ void _G_Command(int ftpConnection, int client_fd, struct command * args) {
 	//Open the file. Send an error message and return if fail.
 	filefd = open(args->fileName, O_RDONLY);
 	if (filefd == -1) {
+		printf("File not found. Sending error to client...");
 		sendFileSize(client_fd, -1); //send a -1 to indicate error message
 		return;
 	}
-	int test = _getFileSize(args);
-	printf("%d\n",test);
-	sendFileSize(client_fd, test);
+	int fsize = _getFileSize(args);
+	printf("Sending file size %d over to client... \n",fsize);
+	sendFileSize(client_fd, fsize);
 
-//	memset(buffer, '\0', sizeof(buffer));
+
+	printf("Sending File %s to client....\n", args->fileName);
 	int read_return = 0;
 	while (1) {
 		read_return = read(filefd, buffer, BUFSIZ);
@@ -219,16 +221,12 @@ void _G_Command(int ftpConnection, int client_fd, struct command * args) {
 			perror("read");
 			exit(1);
 		}
-			printf("%d\n",read_return);
-//		sendFileSize(client_fd, read_return-1);
-		//send read return to client. Client now knows how many bytes are getting sent.
 		if (write(ftpConnection, buffer, read_return) == -1) { //send over the buffer
 			perror("write");
 			exit(1);
 		}
 	}
-	printf("File Sent!\n"); //loop terminated. Server has sent the file.
-//	sendFileSize(client_fd, 0); //send a 0 to terminate client while loop.
+	printf("File Sent!\n"); //Server has sent the file.
 }
 
 /*
@@ -259,18 +257,20 @@ void _LS_Command(int ftpConnection, int client_fd) {
 
 	sendFileSize(client_fd, counter); //send file count.
 
-
+	printf("Sending filelist to client....\n");
 	//iterate through and send files.
 	dp = opendir("./");
 	if (dp != NULL) {
 		while ((ep = readdir(dp))) {
-			memset(buffer, '\0', sizeof(buffer));
+			memset(buffer, '\0', 256);
 			strcpy(buffer, ep->d_name);
-			write(ftpConnection, buffer, sizeof(buffer));
+			write(ftpConnection, buffer, 256);
 		}
 		(void) closedir(dp);
 	} else
 		perror("Couldn't open the directory");
+
+	printf("Filelist sent.\n");
 }
 
 /*
